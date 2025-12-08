@@ -1,0 +1,5 @@
+{
+  "name": "LinkLoom",
+  "description": "A beautiful tool to curate and share collections of links with images. Features simulated backend with local persistence and Gemini-powered collection descriptions.",
+  "requestFramePermissions": []
+}
