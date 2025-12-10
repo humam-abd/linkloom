@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Ensure standard resets if Tailwind CDN doesn't catch everything immediately in nextjs structure */
+body {
+  font-family: 'Inter', sans-serif;
+}
