@@ -1,10 +1,10 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
-import { User } from "@/types";
-import supabase from "@/supabase.config";
-import { useMutation } from "@tanstack/react-query";
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { SupabaseAuthResponse, User } from "@/types";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import supabaseClient from "@/lib/supabase/client";
 
 interface AuthContextType {
   user: User | null;
@@ -19,55 +19,85 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+
+  const { data: session, isLoading: isSessionLoading } = useQuery({
+    queryKey: ["session"],
+    queryFn: () =>
+      fetch("/api/session", {
+        method: "GET",
+      }).then(async (res) => {
+        const sessionData = await res.json();
+        return sessionData;
+      }),
+  });
 
   useEffect(() => {
-    // Check local session on mount
-    const currentUser = supabase.auth.getSession();
-    if (currentUser) {
-      setUser(currentUser);
+    if (session?.user) {
+      setUser(session.user);
+      router.push("/dashboard");
     }
-    setLoading(false);
-  }, []);
+  }, [session]);
 
-  // useEffect(() => {
-  //   supabase.auth.onAuthStateChange((event, session) => {
-  //     if (event === "SIGNED_IN") {
-  //       // User just verified email and is now logged in!
-  //       console.log("User verified:", session.user);
-  //       // Redirect to dashboard or home
-  //     }
-  //   });
-  // }, [supabase]);
+  useEffect(() => {
+    const {
+      data: { subscription },
+    } = supabaseClient.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser(session.user as User);
+      } else {
+        setUser(null);
+      }
+      queryClient.invalidateQueries({ queryKey: ["session"] });
+    });
 
-  const { mutate: signUp } = useMutation({
+    return () => subscription.unsubscribe();
+  }, [supabaseClient, queryClient]);
+
+  const {
+    mutate: signUp,
+    isPending: isSignUpPending,
+    data: userData,
+  } = useMutation({
     mutationFn: ({ email, password }: { email: string; password: string }) =>
       fetch("/api/sign-up", {
         method: "POST",
         body: JSON.stringify({ email, password }),
       }).then(async (res) => {
-        res.json();
-        setUser(await res.json());
-        router.push("/dashboard");
+        const userData = await res.json();
+        return userData as SupabaseAuthResponse;
       }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["session"] });
+    },
   });
 
+  useEffect(() => {
+    if (userData) {
+      setUser(userData?.user);
+    }
+  }, [userData]);
+
   const login = async (email: string, password: string) => {
-    setLoading(true);
-    const u = signUp({ email, password });
-    setUser(u);
-    setLoading(false);
+    signUp({ email, password });
   };
-  console.log("user", user);
+
   const logout = async () => {
-    supabase.auth.signOut();
+    supabaseClient.auth.signOut();
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading: isSessionLoading || isSignUpPending,
+        login,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

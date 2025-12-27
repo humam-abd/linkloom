@@ -1,16 +1,13 @@
 import { supabaseServerClient } from "@/lib/supabase/server";
 
-export async function POST(request: Request) {
+export async function GET() {
   const supabaseServer = await supabaseServerClient();
 
-  const { email, password } = await request.json();
-  const { data, error } = await supabaseServer.auth.signInWithPassword({
-    email,
-    password,
-  });
+  const { data, error } = await supabaseServer.auth.getSession();
 
   if (error) {
     return Response.json({ error: error.message }, { status: 401 });
   }
+
   return Response.json(data);
 }

@@ -10,21 +10,13 @@ import { Button, Card } from "@/components/Shared";
 export default function Dashboard() {
   const { user, loading: authLoading } = useAuth();
   const [collections, setCollections] = useState<Collection[]>([]);
-  const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (!user) {
       router.push("/login");
       return;
-    }
-
-    if (user) {
-      // MockDb.getCollections(user.id).then((cols) => {
-      //   setCollections(cols);
-      //   setLoading(false);
-      // });
     }
   }, [user, authLoading, router]);
 
@@ -40,7 +32,6 @@ export default function Dashboard() {
       theme: "light",
       createdAt: Date.now(),
     };
-    // await MockDb.saveCollection(newCol);
     router.push(`/edit/${newCol.id}`);
   };
 
@@ -53,7 +44,7 @@ export default function Dashboard() {
     });
   };
 
-  if (authLoading || loading)
+  if (authLoading)
     return (
       <div className="flex h-64 items-center justify-center">
         <Loader2 className="animate-spin text-brand-500" />

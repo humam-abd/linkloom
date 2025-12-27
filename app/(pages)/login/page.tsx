@@ -1,10 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, Input, Button } from "@/components/Shared";
-import { useMutation } from "@tanstack/react-query";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -14,8 +13,8 @@ export default function LoginPage() {
   const { login, user, loading } = useAuth();
   const router = useRouter();
 
-  React.useEffect(() => {
-    if (!loading && user) {
+  useEffect(() => {
+    if (user) {
       router.push("/dashboard");
     }
   }, [user, loading, router]);
