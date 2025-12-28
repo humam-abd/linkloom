@@ -11,7 +11,6 @@ import {
   Loader2,
   Edit2Icon,
 } from "lucide-react";
-import { Collection } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button, Card } from "@/components/Shared";
 import { useQuery } from "@tanstack/react-query";
@@ -42,17 +41,8 @@ export default function Dashboard() {
 
   const handleCreate = async () => {
     if (!user) return;
-    const newCol: Collection = {
-      id: crypto.randomUUID(),
-      user_id: user.id,
-      name: "Untitled Collection",
-      description: "",
-      items: [],
-      is_public: false,
-      theme: "light",
-      created_at: new Date().toISOString(),
-    };
-    router.push(`/edit/${newCol.id}`);
+
+    router.push(`/draft/new`);
   };
 
   const handleShare = (e: React.MouseEvent, id: string) => {
@@ -148,7 +138,7 @@ export default function Dashboard() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        router.push(`/edit/${col.id}`);
+                        router.push(`/draft/${col.id}`);
                       }}
                       className="p-1.5 hover:bg-slate-200 rounded-full transition-colors text-slate-500 z-10"
                       title="Copy Link"
