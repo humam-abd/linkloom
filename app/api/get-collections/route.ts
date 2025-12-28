@@ -1,9 +1,10 @@
-import supabase from "@/supabase.config";
+import { supabaseServerClient } from "@/lib/supabase/server";
 
-export async function GET(request: Request) {
+export async function POST(request: Request) {
   const { userId } = await request.json();
+  const supabaseServer = await supabaseServerClient();
 
-  const collections = await supabase
+  const collections = await supabaseServer
     .from("collections")
     .select("*")
     .eq("user_id", userId);

@@ -1,36 +1,21 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import Link from "next/link";
 import { Layout, Sparkles, Share2 } from "lucide-react";
 import { Button, Card } from "@/components/Shared";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
 
 export default function LandingPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!loading && user) {
       router.push("/dashboard");
     }
   }, [user, loading, router]);
-
-  const { data } = useQuery({
-    queryKey: ["get-collections"],
-    queryFn: () =>
-      fetch("/api/get-collections", {
-        method: "GET",
-        body: JSON.stringify({ userId: user?.id }),
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }).then((res) => res.json()),
-  });
-
-  console.log(data);
 
   if (loading) return null; // Or a loading spinner
 

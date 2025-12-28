@@ -6,12 +6,27 @@ import { Plus, Layout, ImageIcon, Share2, Check, Loader2 } from "lucide-react";
 import { Collection } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button, Card } from "@/components/Shared";
+import { useQuery } from "@tanstack/react-query";
 
 export default function Dashboard() {
   const { user, loading: authLoading } = useAuth();
   const [collections, setCollections] = useState<Collection[]>([]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const router = useRouter();
+
+  const { data } = useQuery({
+    queryKey: ["get-collections", user],
+    queryFn: () =>
+      fetch("/api/get-collections", {
+        method: "POST",
+        body: JSON.stringify({ userId: user?.id }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }).then(async (res) => await res.json()),
+  });
+
+  console.log(data);
 
   useEffect(() => {
     if (!user) {
