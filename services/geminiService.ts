@@ -1,4 +1,4 @@
-'use server';
+"use server";
 
 import { GoogleGenAI } from "@google/genai";
 import { LinkItem } from "../types";
@@ -7,7 +7,9 @@ import { LinkItem } from "../types";
 const getAiClient = () => {
   const apiKey = process.env.API_KEY;
   if (!apiKey) {
-    throw new Error("API Key is missing. Please set the API_KEY environment variable.");
+    throw new Error(
+      "API Key is missing. Please set the API_KEY environment variable."
+    );
   }
   return new GoogleGenAI({ apiKey });
 };
@@ -15,11 +17,14 @@ const getAiClient = () => {
 /**
  * Generates a creative description for a collection based on its items.
  */
-export async function generateCollectionDescription(title: string, items: LinkItem[]): Promise<string> {
+export async function generateCollectionDescription(
+  title: string,
+  items: LinkItem[]
+): Promise<string> {
   try {
     const ai = getAiClient();
-    const itemSummaries = items.map(i => `- ${i.title} (${i.url})`).join('\n');
-    
+    const itemSummaries = items.map((i) => `- ${i.url} (${i.url})`).join("\n");
+
     const prompt = `
       I have a collection of links titled "${title}". 
       Here are the items:
@@ -30,7 +35,7 @@ export async function generateCollectionDescription(title: string, items: LinkIt
     `;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: "gemini-2.5-flash",
       contents: prompt,
     });
 
@@ -46,8 +51,8 @@ export async function generateCollectionDescription(title: string, items: LinkIt
  */
 export async function suggestLinkTitle(url: string): Promise<string> {
   try {
-      const ai = getAiClient();
-      const prompt = `
+    const ai = getAiClient();
+    const prompt = `
         I have a URL: "${url}".
         Please generate a clean, human-readable title for this link. 
         If it looks like a specific article or product, guess the title. 
@@ -55,19 +60,19 @@ export async function suggestLinkTitle(url: string): Promise<string> {
         Return ONLY the title string.
       `;
 
-      const response = await ai.models.generateContent({
-          model: 'gemini-2.5-flash',
-          contents: prompt,
-      });
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+    });
 
-      return response.text.trim();
+    return response.text.trim();
   } catch (error) {
-      // Fallback to simple domain parsing
-      try {
-          const domain = new URL(url).hostname.replace('www.', '');
-          return domain.charAt(0).toUpperCase() + domain.slice(1);
-      } catch {
-          return "New Link";
-      }
+    // Fallback to simple domain parsing
+    try {
+      const domain = new URL(url).hostname.replace("www.", "");
+      return domain.charAt(0).toUpperCase() + domain.slice(1);
+    } catch {
+      return "New Link";
+    }
   }
 }
