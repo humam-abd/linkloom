@@ -6,20 +6,24 @@ import { useParams } from "next/navigation";
 import { ExternalLink, Loader2 } from "lucide-react";
 import { Collection } from "@/types";
 import { Button } from "@/components/Shared";
+import { useQuery } from "@tanstack/react-query";
 
 export default function PublicView() {
   const { id } = useParams<{ id: string }>();
   const [collection, setCollection] = useState<Collection | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (id) {
-      // MockDb.getCollectionById(id).then((c) => {
-      //   setCollection(c);
-      //   setLoading(false);
-      // });
-    }
-  }, [id]);
+  const { data } = useQuery({
+    queryKey: ["get-collections-by-id", id],
+    queryFn: () =>
+      fetch("/api/get-collections-by-id", {
+        method: "POST",
+        body: JSON.stringify({ id: id }),
+        headers: { "Content-Type": "application/json" },
+      }).then(async (res) => await res.json()),
+  });
+
+  console.log(data);
 
   if (loading)
     return (
