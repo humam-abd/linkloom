@@ -7,21 +7,24 @@ export interface User {
 
 export interface LinkItem {
   id: string;
-  title: string;
   url: string;
-  imageUrl: string;
+  image: string;
   description?: string;
+  user_id?: string;
+  position?: number;
+  created_at?: string;
 }
 
 export interface Collection {
   id: string;
-  userId: string;
-  title: string;
+  user_id: string;
+  name: string;
   description: string;
-  items: LinkItem[];
-  isPublic: boolean;
-  theme: "light" | "dark" | "colorful";
-  createdAt: number;
+  items?: LinkItem[];
+  is_public?: boolean;
+  theme?: "light" | "dark" | "colorful";
+  created_at?: string;
+  image?: string;
 }
 
 export enum ViewState {

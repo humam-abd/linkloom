@@ -23,6 +23,7 @@ import {
 } from "@/services/geminiService";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button, Input, Card, Modal } from "@/components/Shared";
+import { useQuery } from "@tanstack/react-query";
 
 export default function CollectionEditor() {
   const { user, loading: authLoading } = useAuth();
@@ -30,7 +31,6 @@ export default function CollectionEditor() {
   const router = useRouter();
 
   const [collection, setCollection] = useState<Collection | null>(null);
-  const [loading, setLoading] = useState(true);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [isAddItemOpen, setIsAddItemOpen] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
@@ -60,9 +60,25 @@ export default function CollectionEditor() {
     }
   }, [id, user, authLoading, router]);
 
+  const { data: existingCollection, isLoading } = useQuery<Collection>({
+    queryKey: ["get-collections-by-id", id],
+    queryFn: () =>
+      fetch("/api/get-collections-by-id", {
+        method: "POST",
+        body: JSON.stringify({ id: id }),
+        headers: { "Content-Type": "application/json" },
+      }).then(async (res) => await res.json()),
+    select: (data) => data[0],
+  });
+
+  useEffect(() => {
+    if (existingCollection) {
+      setCollection(existingCollection);
+    }
+  }, [existingCollection]);
+
   const handleSave = async (updated: Collection) => {
     setCollection(updated);
-    // await MockDb.saveCollection(updated);
   };
 
   const handleShare = async () => {
@@ -111,8 +127,7 @@ export default function CollectionEditor() {
     const newItem: LinkItem = {
       id: crypto.randomUUID(),
       url: newItemUrl,
-      title: finalTitle,
-      imageUrl: finalImage,
+      image: finalImage,
       description: "",
     };
 
@@ -130,7 +145,7 @@ export default function CollectionEditor() {
     setIsAiLoading(true);
     // Call server action
     const desc = await generateCollectionDescription(
-      collection.title,
+      collection.name,
       collection.items
     );
     await handleSave({ ...collection, description: desc });
@@ -152,7 +167,7 @@ export default function CollectionEditor() {
     router.push("/dashboard");
   };
 
-  if (loading || !collection)
+  if (!collection)
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="animate-spin" />
@@ -208,9 +223,9 @@ export default function CollectionEditor() {
               Collection Title
             </label>
             <input
-              value={collection.title}
+              value={collection.name}
               onChange={(e) =>
-                handleSave({ ...collection, title: e.target.value })
+                handleSave({ ...collection, name: e.target.value })
               }
               className="text-2xl sm:text-3xl font-bold bg-transparent border-b border-transparent hover:border-slate-300 focus:border-brand-500 focus:outline-none w-full transition-colors pb-1 placeholder:text-slate-300"
               placeholder="Enter title..."
@@ -247,21 +262,24 @@ export default function CollectionEditor() {
               <span className="text-sm text-slate-600">Public Access</span>
               <div
                 onClick={() =>
-                  handleSave({ ...collection, isPublic: !collection.isPublic })
+                  handleSave({
+                    ...collection,
+                    is_public: !collection.is_public,
+                  })
                 }
                 className={`w-10 h-6 rounded-full p-1 cursor-pointer transition-colors ${
-                  collection.isPublic ? "bg-brand-500" : "bg-slate-300"
+                  collection.is_public ? "bg-brand-500" : "bg-slate-300"
                 }`}
               >
                 <div
                   className={`w-4 h-4 bg-white rounded-full transition-transform ${
-                    collection.isPublic ? "translate-x-4" : ""
+                    collection.is_public ? "translate-x-4" : ""
                   }`}
                 />
               </div>
             </div>
             <div className="text-xs text-slate-400 mt-6 pt-4 border-t border-slate-200">
-              Created {new Date(collection.createdAt).toLocaleDateString()}
+              Created {new Date(collection.created_at).toLocaleDateString()}
             </div>
           </Card>
         </div>
@@ -289,14 +307,14 @@ export default function CollectionEditor() {
               >
                 <div className="w-full sm:w-24 h-48 sm:h-24 bg-slate-100 rounded-lg flex-shrink-0 overflow-hidden">
                   <img
-                    src={item.imageUrl}
-                    alt={item.title}
+                    src={item.image}
+                    alt={item.url}
                     className="w-full h-full object-cover"
                   />
                 </div>
                 <div className="flex-1 min-w-0 w-full">
                   <h4 className="font-medium text-slate-900 truncate">
-                    {item.title}
+                    {item.url}
                   </h4>
                   <a
                     href={item.url}

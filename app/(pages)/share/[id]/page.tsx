@@ -10,10 +10,8 @@ import { useQuery } from "@tanstack/react-query";
 
 export default function PublicView() {
   const { id } = useParams<{ id: string }>();
-  const [collection, setCollection] = useState<Collection | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  const { data } = useQuery({
+  const { data: collection, isLoading } = useQuery<Collection>({
     queryKey: ["get-collections-by-id", id],
     queryFn: () =>
       fetch("/api/get-collections-by-id", {
@@ -21,17 +19,16 @@ export default function PublicView() {
         body: JSON.stringify({ id: id }),
         headers: { "Content-Type": "application/json" },
       }).then(async (res) => await res.json()),
+    select: (data) => data[0],
   });
 
-  console.log(data);
-
-  if (loading)
+  if (isLoading)
     return (
       <div className="flex h-screen items-center justify-center bg-slate-50">
         <Loader2 className="animate-spin text-slate-400" />
       </div>
     );
-  if (!collection || !collection.isPublic)
+  if (!collection)
     return (
       <div className="flex h-screen flex-col items-center justify-center bg-slate-50 p-4 text-center">
         <h1 className="text-2xl font-bold text-slate-900 mb-2">
@@ -52,65 +49,74 @@ export default function PublicView() {
       <header className="bg-white border-b border-slate-200 py-12 px-4 text-center">
         <div className="max-w-4xl mx-auto space-y-4">
           <h1 className="text-3xl md:text-5xl font-bold text-slate-900 tracking-tight break-words">
-            {collection.title}
+            {collection.name}
           </h1>
           {collection.description && (
             <p className="text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
               {collection.description}
             </p>
           )}
-          <div className="flex items-center justify-center gap-2 pt-4">
-            <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-medium uppercase tracking-wider">
-              {collection.items.length} Links
-            </span>
-            <span className="text-slate-300">•</span>
-            <Link
-              href="/"
-              className="text-brand-600 hover:underline text-sm font-medium"
-            >
-              Curated on LinkLoom
-            </Link>
-          </div>
+          {collection?.items && (
+            <div className="flex items-center justify-center gap-2 pt-4">
+              <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-medium uppercase tracking-wider">
+                {collection.items.length} Links
+              </span>
+              <span className="text-slate-300">•</span>
+              <Link
+                href="/"
+                className="text-brand-600 hover:underline text-sm font-medium"
+              >
+                Curated on LinkLoom
+              </Link>
+            </div>
+          )}
         </div>
       </header>
 
       {/* Grid */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {collection.items.map((item) => (
-            <a
-              key={item.id}
-              href={item.url}
-              target="_blank"
-              rel="noreferrer"
-              className="group block bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-slate-100"
-            >
-              <div className="aspect-[4/3] bg-slate-100 overflow-hidden relative">
-                <img
-                  src={item.imageUrl}
-                  alt={item.title}
-                  className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
-                  loading="lazy"
-                />
-                <div className="absolute top-3 right-3 bg-white/90 backdrop-blur rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">
-                  <ExternalLink className="w-4 h-4 text-slate-700" />
+          {collection?.items?.map((item) => {
+            const url = new URL("https://" + item.url);
+
+            return (
+              <a
+                key={item.id}
+                href={item.url}
+                target="_blank"
+                rel="noreferrer"
+                className="group block bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-slate-100"
+              >
+                <div className="aspect-[4/3] bg-slate-100 overflow-hidden relative">
+                  <img
+                    src={item.image}
+                    alt={item.url}
+                    className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
+                    loading="lazy"
+                  />
+                  <div className="absolute top-3 right-3 bg-white/90 backdrop-blur rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">
+                    <ExternalLink className="w-4 h-4 text-slate-700" />
+                  </div>
                 </div>
-              </div>
-              <div className="p-5">
-                <h3 className="font-bold text-slate-900 mb-1 line-clamp-1 group-hover:text-brand-600 transition-colors">
-                  {item.title}
-                </h3>
-                <p className="text-xs text-slate-400 font-mono truncate mb-3">
-                  {new URL(item.url).hostname.replace("www.", "")}
-                </p>
-                {item.description && (
-                  <p className="text-sm text-slate-500 line-clamp-2">
-                    {item.description}
+                <div className="p-5">
+                  <h3 className="font-bold text-slate-900 mb-1 line-clamp-1 group-hover:text-brand-600 transition-colors">
+                    {item.url}
+                  </h3>
+                  <p className="text-xs text-slate-400 font-mono truncate mb-3 capitalize">
+                    {url?.hostname
+                      .replace("www.", "")
+                      .replace("https://", "")
+                      .replace(".com", "")}
                   </p>
-                )}
-              </div>
-            </a>
-          ))}
+                  {item.description && (
+                    <p className="text-sm text-slate-500 line-clamp-2">
+                      {item.description}
+                    </p>
+                  )}
+                </div>
+              </a>
+            );
+          })}
         </div>
       </main>
 

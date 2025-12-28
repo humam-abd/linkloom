@@ -8,5 +8,21 @@ export async function POST(request: Request) {
     .from("collections")
     .select("*")
     .eq("id", id);
-  return Response.json(collections.data);
+
+  const links = await supabaseServer
+    .from("links")
+    .select("*")
+    .in(
+      "collection_id",
+      collections.data.map((c) => c.id)
+    );
+
+  const collectionData = collections.data.map((c) => {
+    const linksData = links.data.filter((l) => l.collection_id === c.id);
+    return {
+      ...c,
+      items: linksData,
+    };
+  });
+  return Response.json(collectionData);
 }

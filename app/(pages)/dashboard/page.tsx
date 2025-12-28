@@ -2,7 +2,15 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Layout, ImageIcon, Share2, Check, Loader2 } from "lucide-react";
+import {
+  Plus,
+  Layout,
+  ImageIcon,
+  Share2,
+  Check,
+  Loader2,
+  Edit2Icon,
+} from "lucide-react";
 import { Collection } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button, Card } from "@/components/Shared";
@@ -10,11 +18,10 @@ import { useQuery } from "@tanstack/react-query";
 
 export default function Dashboard() {
   const { user, loading: authLoading } = useAuth();
-  const [collections, setCollections] = useState<Collection[]>([]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const router = useRouter();
 
-  const { data } = useQuery({
+  const { data: collections } = useQuery({
     queryKey: ["get-collections", user],
     queryFn: () =>
       fetch("/api/get-collections", {
@@ -25,8 +32,6 @@ export default function Dashboard() {
         },
       }).then(async (res) => await res.json()),
   });
-
-  console.log(data);
 
   useEffect(() => {
     if (!user) {
@@ -39,13 +44,13 @@ export default function Dashboard() {
     if (!user) return;
     const newCol: Collection = {
       id: crypto.randomUUID(),
-      userId: user.id,
-      title: "Untitled Collection",
+      user_id: user.id,
+      name: "Untitled Collection",
       description: "",
       items: [],
-      isPublic: true,
+      is_public: false,
       theme: "light",
-      createdAt: Date.now(),
+      created_at: new Date().toISOString(),
     };
     router.push(`/edit/${newCol.id}`);
   };
@@ -79,7 +84,7 @@ export default function Dashboard() {
         </Button>
       </div>
 
-      {collections.length === 0 ? (
+      {collections?.length === 0 ? (
         <div className="text-center py-20 border-2 border-dashed border-slate-200 rounded-2xl bg-white/50">
           <Layout className="w-12 h-12 mx-auto text-slate-300 mb-4" />
           <h3 className="text-lg font-medium text-slate-900">
@@ -94,19 +99,19 @@ export default function Dashboard() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {collections.map((col) => (
+          {collections?.map((col) => (
             <Card
               key={col.id}
-              onClick={() => router.push(`/edit/${col.id}`)}
+              onClick={() => router.push(`/share/${col.id}`)}
               className="group h-64 flex flex-col relative transition-all hover:ring-2 hover:ring-brand-500/20"
             >
               <div className="h-32 bg-slate-100 flex items-center justify-center overflow-hidden relative">
-                {col.items.length > 0 ? (
+                {col?.items?.length > 0 ? (
                   <div className="grid grid-cols-2 w-full h-full">
-                    {col.items.slice(0, 4).map((item, idx) => (
+                    {col?.items?.slice(0, 4).map((item, idx) => (
                       <img
                         key={idx}
-                        src={item.imageUrl}
+                        src={item.image}
                         className="w-full h-full object-cover"
                         alt=""
                       />
@@ -119,15 +124,15 @@ export default function Dashboard() {
               </div>
               <div className="p-5 flex-1 flex flex-col">
                 <h3 className="font-semibold text-lg text-slate-900 mb-1 truncate">
-                  {col.title}
+                  {col.name}
                 </h3>
                 <p className="text-sm text-slate-500 line-clamp-2">
                   {col.description || "No description"}
                 </p>
                 <div className="mt-auto pt-4 flex items-center justify-between text-xs text-slate-400">
-                  <span>{col.items.length} items</span>
+                  <span>{col?.items?.length} items</span>
                   <div className="flex gap-3 items-center">
-                    <span>{new Date(col.createdAt).toLocaleDateString()}</span>
+                    <span>{new Date(col.created_at).toLocaleDateString()}</span>
                     <button
                       onClick={(e) => handleShare(e, col.id)}
                       className="p-1.5 hover:bg-slate-200 rounded-full transition-colors text-slate-500 z-10"
@@ -138,6 +143,17 @@ export default function Dashboard() {
                       ) : (
                         <Share2 className="w-3.5 h-3.5" />
                       )}
+                    </button>
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/edit/${col.id}`);
+                      }}
+                      className="p-1.5 hover:bg-slate-200 rounded-full transition-colors text-slate-500 z-10"
+                      title="Copy Link"
+                    >
+                      <Edit2Icon className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
