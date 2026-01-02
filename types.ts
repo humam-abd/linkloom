@@ -22,8 +22,15 @@ export interface Collection {
   description: string;
   items?: LinkItem[];
   is_public?: boolean;
-  theme?: "light" | "dark" | "colorful";
   created_at?: string;
+  image?: string;
+}
+
+export interface CollectionInputType {
+  id: string;
+  name: string;
+  description: string;
+  is_public?: boolean;
   image?: string;
 }
 

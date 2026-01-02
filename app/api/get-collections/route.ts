@@ -7,7 +7,8 @@ export async function POST(request: Request) {
   const collections = await supabaseServer
     .from("collections")
     .select("*")
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
 
   const links = await supabaseServer
     .from("links")
@@ -15,7 +16,8 @@ export async function POST(request: Request) {
     .in(
       "collection_id",
       collections.data.map((c) => c.id)
-    );
+    )
+    .order("created_at", { ascending: false });
 
   const collectionData = collections.data.map((c) => {
     const linksData = links.data.filter((l) => l.collection_id === c.id);

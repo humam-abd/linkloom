@@ -15,7 +15,7 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import { Collection, LinkItem } from "@/types";
+import { Collection, CollectionInputType, LinkItem } from "@/types";
 // Import server actions
 import {
   generateCollectionDescription,
@@ -23,7 +23,7 @@ import {
 } from "@/services/geminiService";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button, Input, Card, Modal } from "@/components/Shared";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 
 export default function CollectionEditor() {
   const { user, loading: authLoading } = useAuth();
@@ -31,6 +31,7 @@ export default function CollectionEditor() {
   const router = useRouter();
 
   const [collection, setCollection] = useState<Collection | null>(null);
+  const [isPublic, setIsPublic] = useState<boolean | null>(false);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [isAddItemOpen, setIsAddItemOpen] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
@@ -46,17 +47,6 @@ export default function CollectionEditor() {
     if (!user) {
       router.push("/login");
       return;
-    }
-
-    if (id) {
-      // MockDb.getCollectionById(id).then((c) => {
-      //   if (c && c.userId === user.id) {
-      //     setCollection(c);
-      //   } else {
-      //     router.push("/dashboard"); // Not found or unauthorized
-      //   }
-      //   setLoading(false);
-      // });
     }
   }, [id, user, authLoading, router]);
 
@@ -74,11 +64,22 @@ export default function CollectionEditor() {
   useEffect(() => {
     if (existingCollection) {
       setCollection(existingCollection);
+      setIsPublic(existingCollection.is_public);
     }
   }, [existingCollection]);
 
   const handleSave = async (updated: Collection) => {
     setCollection(updated);
+  };
+
+  const handleUpdate = async () => {
+    updateCollection({
+      id: collection!.id,
+      name: collection!.name,
+      description: collection!.description,
+      is_public: isPublic,
+      image: collection!.image,
+    });
   };
 
   const handleShare = async () => {
@@ -161,6 +162,25 @@ export default function CollectionEditor() {
     await handleSave(updated);
   };
 
+  const { mutate: updateCollection, data: updated } = useMutation({
+    mutationFn: (body: CollectionInputType) =>
+      fetch("/api/update-collection", {
+        method: "PATCH",
+        body: JSON.stringify(body),
+        headers: { "Content-Type": "application/json" },
+      }).then(async (res) => await res.json()),
+    onSuccess: (data) => console.log(data),
+  });
+
+  useEffect(() => {
+    if (collection) {
+      updateCollection({
+        ...collection,
+        is_public: isPublic,
+      });
+    }
+  }, [isPublic]);
+
   const deleteCollection = async () => {
     if (!collection || !confirm("Are you sure? This cannot be undone.")) return;
     // await MockDb.deleteCollection(collection.id);
@@ -227,6 +247,7 @@ export default function CollectionEditor() {
               onChange={(e) =>
                 handleSave({ ...collection, name: e.target.value })
               }
+              onBlur={handleUpdate}
               className="text-2xl sm:text-3xl font-bold bg-transparent border-b border-transparent hover:border-slate-300 focus:border-brand-500 focus:outline-none w-full transition-colors pb-1 placeholder:text-slate-300"
               placeholder="Enter title..."
             />
@@ -248,6 +269,7 @@ export default function CollectionEditor() {
               onChange={(e) =>
                 handleSave({ ...collection, description: e.target.value })
               }
+              onBlur={handleUpdate}
               className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none h-24 resize-none text-slate-600 bg-white"
               placeholder="What is this collection about?"
             />
@@ -261,19 +283,14 @@ export default function CollectionEditor() {
             <div className="flex items-center justify-between mb-4">
               <span className="text-sm text-slate-600">Public Access</span>
               <div
-                onClick={() =>
-                  handleSave({
-                    ...collection,
-                    is_public: !collection.is_public,
-                  })
-                }
+                onClick={() => setIsPublic(!isPublic)}
                 className={`w-10 h-6 rounded-full p-1 cursor-pointer transition-colors ${
-                  collection.is_public ? "bg-brand-500" : "bg-slate-300"
+                  isPublic ? "bg-brand-500" : "bg-slate-300"
                 }`}
               >
                 <div
                   className={`w-4 h-4 bg-white rounded-full transition-transform ${
-                    collection.is_public ? "translate-x-4" : ""
+                    isPublic ? "translate-x-4" : ""
                   }`}
                 />
               </div>
