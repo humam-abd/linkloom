@@ -6,13 +6,24 @@ export interface User {
 }
 
 export interface LinkItem {
-  id: string;
+  id?: string;
   url: string;
   image: string;
   description?: string;
   user_id?: string;
+  collection_id?: string;
   position?: number;
   created_at?: string;
+}
+
+export interface LinkItemInputType {
+  id?: string;
+  url: string;
+  image: string;
+  description?: string;
+  user_id?: string;
+  collection_id?: string;
+  position?: number;
 }
 
 export interface Collection {

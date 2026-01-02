@@ -15,7 +15,7 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import { Collection, CollectionInputType, LinkItem } from "@/types";
+import { Collection, CollectionInputType, LinkItemInputType } from "@/types";
 // Import server actions
 import {
   generateCollectionDescription,
@@ -23,7 +23,7 @@ import {
 } from "@/services/geminiService";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button, Input, Card, Modal } from "@/components/Shared";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export default function CollectionEditor() {
   const { user, loading: authLoading } = useAuth();
@@ -41,6 +41,8 @@ export default function CollectionEditor() {
   const [newItemTitle, setNewItemTitle] = useState("");
   const [newItemImage, setNewItemImage] = useState("");
   const [imageMode, setImageMode] = useState<"url" | "upload">("url");
+
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (authLoading) return;
@@ -125,15 +127,17 @@ export default function CollectionEditor() {
       finalImage = `https://picsum.photos/seed/${Math.random()}/400/300`;
     }
 
-    const newItem: LinkItem = {
-      id: crypto.randomUUID(),
+    const newItem: LinkItemInputType = {
       url: newItemUrl,
       image: finalImage,
       description: "",
+      collection_id: collection.id,
+      user_id: user?.id,
+      position: collection.items.length,
     };
 
-    const updated = { ...collection, items: [newItem, ...collection.items] };
-    await handleSave(updated);
+    createLink(newItem);
+
     setIsAddItemOpen(false);
     setNewItemUrl("");
     setNewItemTitle("");
@@ -155,11 +159,7 @@ export default function CollectionEditor() {
 
   const deleteItem = async (itemId: string) => {
     if (!collection) return;
-    const updated = {
-      ...collection,
-      items: collection.items.filter((i) => i.id !== itemId),
-    };
-    await handleSave(updated);
+    deleteLink({ id: itemId });
   };
 
   const { mutate: updateCollection, data: updated } = useMutation({
@@ -180,6 +180,32 @@ export default function CollectionEditor() {
       });
     }
   }, [isPublic]);
+
+  const { mutate: createLink } = useMutation({
+    mutationFn: (body: LinkItemInputType) =>
+      fetch("/api/create-link", {
+        method: "POST",
+        body: JSON.stringify(body),
+        headers: { "Content-Type": "application/json" },
+      }).then(async (res) => await res.json()),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: ["get-collections-by-id", id],
+      }),
+  });
+
+  const { mutate: deleteLink } = useMutation({
+    mutationFn: (body: { id: string }) =>
+      fetch("/api/delete-link", {
+        method: "DELETE",
+        body: JSON.stringify(body),
+        headers: { "Content-Type": "application/json" },
+      }).then(async (res) => await res.json()),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: ["get-collections-by-id", id],
+      }),
+  });
 
   const deleteCollection = async () => {
     if (!collection || !confirm("Are you sure? This cannot be undone.")) return;
