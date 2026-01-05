@@ -35,6 +35,7 @@ export default function CollectionEditor() {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [isAddItemOpen, setIsAddItemOpen] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [isDeleteCollectionOpen, setIsDeleteCollectionOpen] = useState(false);
 
   // New Item State
   const [newItemUrl, setNewItemUrl] = useState("");
@@ -53,9 +54,9 @@ export default function CollectionEditor() {
   }, [id, user, authLoading, router]);
 
   const { data: existingCollection, isLoading } = useQuery<Collection>({
-    queryKey: ["get-collections-by-id", id],
+    queryKey: ["get-collection-by-id", id],
     queryFn: () =>
-      fetch("/api/get-collections-by-id", {
+      fetch("/api/get-collection-by-id", {
         method: "POST",
         body: JSON.stringify({ id: id }),
         headers: { "Content-Type": "application/json" },
@@ -181,6 +182,15 @@ export default function CollectionEditor() {
     }
   }, [isPublic]);
 
+  useEffect(() => {
+    if (!isAiLoading && collection) {
+      updateCollection({
+        ...collection,
+        description: collection.description,
+      });
+    }
+  }, [isAiLoading]);
+
   const { mutate: createLink } = useMutation({
     mutationFn: (body: LinkItemInputType) =>
       fetch("/api/create-link", {
@@ -190,7 +200,7 @@ export default function CollectionEditor() {
       }).then(async (res) => await res.json()),
     onSuccess: () =>
       queryClient.invalidateQueries({
-        queryKey: ["get-collections-by-id", id],
+        queryKey: ["get-collection-by-id", id],
       }),
   });
 
@@ -203,15 +213,24 @@ export default function CollectionEditor() {
       }).then(async (res) => await res.json()),
     onSuccess: () =>
       queryClient.invalidateQueries({
-        queryKey: ["get-collections-by-id", id],
+        queryKey: ["get-collection-by-id", id],
       }),
   });
 
-  const deleteCollection = async () => {
-    if (!collection || !confirm("Are you sure? This cannot be undone.")) return;
-    // await MockDb.deleteCollection(collection.id);
-    router.push("/dashboard");
-  };
+  const { mutate: deleteCollection } = useMutation({
+    mutationFn: (body: { id: string }) =>
+      fetch("/api/delete-collection", {
+        method: "DELETE",
+        body: JSON.stringify(body),
+        headers: { "Content-Type": "application/json" },
+      }).then(async (res) => await res.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["get-collections"],
+      });
+      router.push("/dashboard");
+    },
+  });
 
   if (!collection)
     return (
@@ -233,7 +252,7 @@ export default function CollectionEditor() {
         <div className="flex flex-wrap gap-2 sm:gap-3 justify-end">
           <Button
             variant="ghost"
-            onClick={deleteCollection}
+            onClick={() => setIsDeleteCollectionOpen(true)}
             className="text-red-500 hover:text-red-600 hover:bg-red-50 text-sm"
           >
             <Trash2 className="w-4 h-4 mr-2" /> Delete
@@ -486,6 +505,30 @@ export default function CollectionEditor() {
             </Button>
             <Button onClick={addItem} disabled={!newItemUrl}>
               Add Item
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={isDeleteCollectionOpen}
+        onClose={() => setIsDeleteCollectionOpen(false)}
+        title="Delete Collection?"
+      >
+        <div>
+          <p>
+            This action cannot be undone. All items will be deleted and the
+            collection will be permanently deleted.
+          </p>
+          <div className="pt-4 flex justify-end gap-3">
+            <Button
+              variant="secondary"
+              onClick={() => setIsDeleteCollectionOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={() => deleteCollection({ id: collection?.id })}>
+              Delete
             </Button>
           </div>
         </div>

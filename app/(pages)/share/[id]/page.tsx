@@ -12,9 +12,9 @@ export default function PublicView() {
   const { id } = useParams<{ id: string }>();
 
   const { data: collection, isLoading } = useQuery<Collection>({
-    queryKey: ["get-collections-by-id", id],
+    queryKey: ["get-public-collection-by-id", id],
     queryFn: () =>
-      fetch("/api/get-collections-by-id", {
+      fetch("/api/get-public-collection-by-id", {
         method: "POST",
         body: JSON.stringify({ id: id }),
         headers: { "Content-Type": "application/json" },
@@ -77,14 +77,23 @@ export default function PublicView() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {collection?.items?.map((item) => {
-            const url = new URL("https://" + item.url);
+            const url = item?.url.includes("https://")
+              ? new URL(`${item?.url}`)
+              : item.url;
 
             return (
-              <a
+              <div
                 key={item.id}
-                href={item.url}
-                target="_blank"
-                rel="noreferrer"
+                tabIndex={0}
+                onClick={() => {
+                  window.open(url, "_blank");
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    window.open(url, "_blank");
+                  }
+                }}
+                role="button"
                 className="group block bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-slate-100"
               >
                 <div className="aspect-[4/3] bg-slate-100 overflow-hidden relative">
@@ -103,10 +112,14 @@ export default function PublicView() {
                     {item.url}
                   </h3>
                   <p className="text-xs text-slate-400 font-mono truncate mb-3 capitalize">
-                    {url?.hostname
-                      .replace("www.", "")
-                      .replace("https://", "")
-                      .replace(".com", "")}
+                    {
+                      url.toString()
+                      // ?.hostname
+                      //   .replace("www.", "")
+                      //   .replace("https://", "")
+                      //   .replace("http://", "")
+                      //   .replace(".com", "")
+                    }
                   </p>
                   {item.description && (
                     <p className="text-sm text-slate-500 line-clamp-2">
@@ -114,7 +127,7 @@ export default function PublicView() {
                     </p>
                   )}
                 </div>
-              </a>
+              </div>
             );
           })}
         </div>
