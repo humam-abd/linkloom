@@ -7,16 +7,13 @@ import {
   Plus,
   Trash2,
   ExternalLink,
-  Share2,
   Sparkles,
   ArrowLeft,
   Loader2,
-  Check,
   Upload,
   X,
 } from "lucide-react";
 import { Collection, CollectionInputType, LinkItemInputType } from "@/types";
-// Import server actions
 import {
   generateCollectionDescription,
   suggestLinkTitle,
@@ -24,6 +21,8 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { Button, Input, Card, Modal } from "@/components/Shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCollections } from "@/hooks/useCollections";
+import { useLinks } from "@/hooks/useLinks";
 
 export default function CollectionEditor() {
   const { user, loading: authLoading } = useAuth();
@@ -34,7 +33,6 @@ export default function CollectionEditor() {
   const [isPublic, setIsPublic] = useState<boolean | null>(false);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [isAddItemOpen, setIsAddItemOpen] = useState(false);
-  const [copySuccess, setCopySuccess] = useState(false);
   const [isDeleteCollectionOpen, setIsDeleteCollectionOpen] = useState(false);
 
   // New Item State
@@ -53,16 +51,9 @@ export default function CollectionEditor() {
     }
   }, [id, user, authLoading, router]);
 
-  const { data: existingCollection, isLoading } = useQuery<Collection>({
-    queryKey: ["get-collection-by-id", id],
-    queryFn: () =>
-      fetch("/api/get-collection-by-id", {
-        method: "POST",
-        body: JSON.stringify({ id: id }),
-        headers: { "Content-Type": "application/json" },
-      }).then(async (res) => await res.json()),
-    select: (data) => data[0],
-  });
+  const { existingCollection, updateCollection, deleteCollection } =
+    useCollections();
+  const { createLink, deleteLink } = useLinks();
 
   useEffect(() => {
     if (existingCollection) {
@@ -83,18 +74,6 @@ export default function CollectionEditor() {
       is_public: isPublic,
       image: collection!.image,
     });
-  };
-
-  const handleShare = async () => {
-    if (!collection) return;
-    const url = `${window.location.origin}/share/${collection.id}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopySuccess(true);
-      setTimeout(() => setCopySuccess(false), 2000);
-    } catch (err) {
-      console.error("Failed to copy text: ", err);
-    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -163,16 +142,6 @@ export default function CollectionEditor() {
     deleteLink({ id: itemId });
   };
 
-  const { mutate: updateCollection, data: updated } = useMutation({
-    mutationFn: (body: CollectionInputType) =>
-      fetch("/api/update-collection", {
-        method: "PATCH",
-        body: JSON.stringify(body),
-        headers: { "Content-Type": "application/json" },
-      }).then(async (res) => await res.json()),
-    onSuccess: (data) => console.log(data),
-  });
-
   useEffect(() => {
     if (collection) {
       updateCollection({
@@ -190,47 +159,6 @@ export default function CollectionEditor() {
       });
     }
   }, [isAiLoading]);
-
-  const { mutate: createLink } = useMutation({
-    mutationFn: (body: LinkItemInputType) =>
-      fetch("/api/create-link", {
-        method: "POST",
-        body: JSON.stringify(body),
-        headers: { "Content-Type": "application/json" },
-      }).then(async (res) => await res.json()),
-    onSuccess: () =>
-      queryClient.invalidateQueries({
-        queryKey: ["get-collection-by-id", id],
-      }),
-  });
-
-  const { mutate: deleteLink } = useMutation({
-    mutationFn: (body: { id: string }) =>
-      fetch("/api/delete-link", {
-        method: "DELETE",
-        body: JSON.stringify(body),
-        headers: { "Content-Type": "application/json" },
-      }).then(async (res) => await res.json()),
-    onSuccess: () =>
-      queryClient.invalidateQueries({
-        queryKey: ["get-collection-by-id", id],
-      }),
-  });
-
-  const { mutate: deleteCollection } = useMutation({
-    mutationFn: (body: { id: string }) =>
-      fetch("/api/delete-collection", {
-        method: "DELETE",
-        body: JSON.stringify(body),
-        headers: { "Content-Type": "application/json" },
-      }).then(async (res) => await res.json()),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["get-collections"],
-      });
-      router.push("/dashboard");
-    },
-  });
 
   if (!collection)
     return (
@@ -257,18 +185,7 @@ export default function CollectionEditor() {
           >
             <Trash2 className="w-4 h-4 mr-2" /> Delete
           </Button>
-          <Button
-            variant="secondary"
-            onClick={handleShare}
-            className="min-w-[100px] transition-all text-sm"
-          >
-            {copySuccess ? (
-              <Check className="w-4 h-4 mr-2 text-green-600" />
-            ) : (
-              <Share2 className="w-4 h-4 mr-2" />
-            )}
-            {copySuccess ? "Copied!" : "Share"}
-          </Button>
+
           <a href={`/share/${collection.id}`} target="_blank" rel="noreferrer">
             <Button variant="secondary" className="text-sm">
               <ExternalLink className="w-4 h-4 mr-2" /> Preview

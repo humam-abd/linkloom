@@ -7,6 +7,7 @@ import { ExternalLink, Loader2 } from "lucide-react";
 import { Collection } from "@/types";
 import { Button } from "@/components/Shared";
 import { useQuery } from "@tanstack/react-query";
+import { getHostname } from "@/lib/utils";
 
 export default function PublicView() {
   const { id } = useParams<{ id: string }>();
@@ -77,9 +78,7 @@ export default function PublicView() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {collection?.items?.map((item) => {
-            const url = item?.url.includes("https://")
-              ? new URL(`${item?.url}`)
-              : item.url;
+            const url = item?.url;
 
             return (
               <div
@@ -111,15 +110,8 @@ export default function PublicView() {
                   <h3 className="font-bold text-slate-900 mb-1 line-clamp-1 group-hover:text-brand-600 transition-colors">
                     {item.url}
                   </h3>
-                  <p className="text-xs text-slate-400 font-mono truncate mb-3 capitalize">
-                    {
-                      url.toString()
-                      // ?.hostname
-                      //   .replace("www.", "")
-                      //   .replace("https://", "")
-                      //   .replace("http://", "")
-                      //   .replace(".com", "")
-                    }
+                  <p className="text-xs text-slate-400 font-mono truncate mb-3">
+                    {getHostname(url)}
                   </p>
                   {item.description && (
                     <p className="text-sm text-slate-500 line-clamp-2">

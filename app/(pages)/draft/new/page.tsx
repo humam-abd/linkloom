@@ -1,18 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import Link from "next/link";
 import { Plus, Sparkles, ArrowLeft } from "lucide-react";
-import { Collection } from "@/types";
 import { generateCollectionDescription } from "@/services/geminiService";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button, Card } from "@/components/Shared";
-import { useMutation } from "@tanstack/react-query";
+import { useCollections } from "@/hooks/useCollections";
 
 export default function NewCollection() {
-  const router = useRouter();
-
   const [requiredFields, setRequiredFields] = useState<{
     name: string;
     description: string;
@@ -23,15 +19,7 @@ export default function NewCollection() {
 
   const { user } = useAuth();
 
-  const { mutate: createCollection } = useMutation({
-    mutationFn: (body: Omit<Collection, "id">) =>
-      fetch("/api/create-collection", {
-        method: "POST",
-        body: JSON.stringify(body),
-        headers: { "Content-Type": "application/json" },
-      }).then(async (res) => await res.json()),
-    onSuccess: (data) => router.push(`/draft/${data.id}`),
-  });
+  const { createCollection } = useCollections();
 
   const handleSave = async () => {
     if (requiredFields?.name && requiredFields?.description) {
@@ -42,7 +30,6 @@ export default function NewCollection() {
   const generateDescription = async () => {
     if (!requiredFields) return;
     setIsAiLoading(true);
-    // Call server action
     const desc = await generateCollectionDescription(requiredFields.name, []);
     await setRequiredFields({ ...requiredFields, description: desc });
     setIsAiLoading(false);
