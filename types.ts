@@ -1,3 +1,5 @@
+import { UploadApiResponse } from "cloudinary";
+
 export interface User {
   id: string;
   email: string;
@@ -112,4 +114,10 @@ export interface Session {
   expires_in?: number;
   token_type?: string;
   user?: UserSupabaseResponse;
+}
+
+export interface ImageDataResponse {
+  message: string;
+  url: string;
+  details: UploadApiResponse;
 }

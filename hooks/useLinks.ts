@@ -32,5 +32,18 @@ export const useLinks = () => {
       }),
   });
 
-  return { createLink, deleteLink };
+  const { mutate: updateLink } = useMutation({
+    mutationFn: (body: { id: string }) =>
+      fetch("/api/update-link", {
+        method: "PATCH",
+        body: JSON.stringify(body),
+        headers: { "Content-Type": "application/json" },
+      }).then(async (res) => await res.json()),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: ["get-collection-by-id", id],
+      }),
+  });
+
+  return { createLink, updateLink, deleteLink };
 };

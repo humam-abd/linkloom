@@ -13,16 +13,16 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import { Collection, CollectionInputType, LinkItemInputType } from "@/types";
+import { Collection, LinkItemInputType } from "@/types";
 import {
   generateCollectionDescription,
   suggestLinkTitle,
 } from "@/services/geminiService";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button, Input, Card, Modal } from "@/components/Shared";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCollections } from "@/hooks/useCollections";
 import { useLinks } from "@/hooks/useLinks";
+import { useImage } from "@/hooks/useImage";
 
 export default function CollectionEditor() {
   const { user, loading: authLoading } = useAuth();
@@ -39,9 +39,8 @@ export default function CollectionEditor() {
   const [newItemUrl, setNewItemUrl] = useState("");
   const [newItemTitle, setNewItemTitle] = useState("");
   const [newItemImage, setNewItemImage] = useState("");
+  const [imagePublicId, setImagePublicId] = useState(null);
   const [imageMode, setImageMode] = useState<"url" | "upload">("url");
-
-  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (authLoading) return;
@@ -54,6 +53,14 @@ export default function CollectionEditor() {
   const { existingCollection, updateCollection, deleteCollection } =
     useCollections();
   const { createLink, deleteLink } = useLinks();
+  const { uploadImage, isUploadingImage, deleteImage, isDeletingImage } =
+    useImage(
+      (image) => {
+        setNewItemImage(image?.url);
+        setImagePublicId(image?.details?.public_id);
+      },
+      () => setImagePublicId(null)
+    );
 
   useEffect(() => {
     if (existingCollection) {
@@ -79,14 +86,13 @@ export default function CollectionEditor() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Basic size limit check (1MB)
       if (file.size > 1024 * 1024) {
         alert("File too large. Please use an image smaller than 1MB.");
         return;
       }
       const reader = new FileReader();
       reader.onloadend = () => {
-        setNewItemImage(reader.result as string);
+        uploadImage({ file: reader.result as string });
       };
       reader.readAsDataURL(file);
     }
@@ -95,13 +101,11 @@ export default function CollectionEditor() {
   const addItem = async () => {
     if (!collection || !newItemUrl) return;
 
-    // Auto-fill title if empty using Server Action
     let finalTitle = newItemTitle;
     if (!finalTitle) {
       finalTitle = await suggestLinkTitle(newItemUrl);
     }
 
-    // Auto-fill image if empty
     let finalImage = newItemImage;
     if (!finalImage) {
       finalImage = `https://picsum.photos/seed/${Math.random()}/400/300`;
@@ -160,6 +164,8 @@ export default function CollectionEditor() {
     }
   }, [isAiLoading]);
 
+  const isImageLoading = isUploadingImage || isDeletingImage;
+
   if (!collection)
     return (
       <div className="flex h-screen items-center justify-center">
@@ -169,7 +175,6 @@ export default function CollectionEditor() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-      {/* Header Actions */}
       <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <Link
           href="/dashboard"
@@ -197,7 +202,6 @@ export default function CollectionEditor() {
         </div>
       </div>
 
-      {/* Editor Header */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
         <div className="md:col-span-2 space-y-6">
           <div className="space-y-2">
@@ -238,7 +242,6 @@ export default function CollectionEditor() {
           </div>
         </div>
 
-        {/* Collection Settings / Stats */}
         <div className="md:col-span-1">
           <Card className="p-5 bg-white border-slate-200">
             <h4 className="font-semibold text-slate-900 mb-4">Settings</h4>
@@ -264,7 +267,6 @@ export default function CollectionEditor() {
         </div>
       </div>
 
-      {/* Items List */}
       <div className="space-y-4">
         <h3 className="text-xl font-bold text-slate-900 mb-6">
           Items ({collection.items.length})
@@ -383,6 +385,28 @@ export default function CollectionEditor() {
                 value={newItemImage}
                 onChange={(e) => setNewItemImage(e.target.value)}
               />
+            ) : isImageLoading ? (
+              <div className="w-full flex flex-row justify-center min-h-20 items-center">
+                <Loader2 className="animate-spin text-brand-600" />
+              </div>
+            ) : newItemImage ? (
+              <div className="mt-3 relative rounded-lg overflow-hidden border border-slate-200 h-32 bg-slate-50">
+                <img
+                  src={newItemImage}
+                  alt="Preview"
+                  className="w-full h-full object-cover"
+                />
+                <button
+                  onClick={() => {
+                    deleteImage({ publicId: imagePublicId });
+                    setNewItemImage("");
+                  }}
+                  className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white p-1 rounded-full backdrop-blur-sm transition-colors"
+                  title="Remove image"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             ) : (
               <div className="border-2 border-dashed border-slate-300 bg-white rounded-lg p-6 hover:bg-slate-50 transition-colors text-center relative">
                 <input
@@ -395,23 +419,6 @@ export default function CollectionEditor() {
                   <Upload className="w-8 h-8 text-slate-300" />
                   <span className="text-sm">Click to upload image</span>
                 </div>
-              </div>
-            )}
-
-            {newItemImage && (
-              <div className="mt-3 relative rounded-lg overflow-hidden border border-slate-200 h-32 bg-slate-50">
-                <img
-                  src={newItemImage}
-                  alt="Preview"
-                  className="w-full h-full object-cover"
-                />
-                <button
-                  onClick={() => setNewItemImage("")}
-                  className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white p-1 rounded-full backdrop-blur-sm transition-colors"
-                  title="Remove image"
-                >
-                  <X className="w-4 h-4" />
-                </button>
               </div>
             )}
           </div>
